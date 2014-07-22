@@ -1,5 +1,5 @@
 <%
-boolean debug = true;
+boolean debug = false;
 String status = "";
 if(debug) {
 	status = "ingelogd";
