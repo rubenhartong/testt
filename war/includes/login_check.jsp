@@ -12,5 +12,5 @@ else {
 	}else if(!status.equals("ingelogd")){
 	    response.sendRedirect("/Inviting/index.jsp?message=Log+eerst+in+om+verder+te+gaan");
 	}
-}
+} 
 %>
