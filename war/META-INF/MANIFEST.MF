@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: InviteSystem
+Bundle-SymbolicName: InviteSystem
+Bundle-Version: 1.0.0.qualifier
+Bundle-ClassPath: InviteSystem.jar,
+ Ruben/Downloads/mysql-connector-java-5.1.2.jar
+Export-Package: domein,
+ model,
+ servlets

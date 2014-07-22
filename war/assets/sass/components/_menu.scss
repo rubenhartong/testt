@@ -1,0 +1,75 @@
+h1 {
+   background:$wall ;
+    color:black;
+    font-weight: bold;
+    font-size:1.3em;
+    padding: 10px;
+}
+.select_kind {
+		float:left;
+		padding: 5px;
+	}
+.searchform {
+  	@include border-radius(5px);
+  	padding:10px;
+	height:90px;;
+	
+	
+	&.hidden {
+		display:none;
+	}
+	
+	.block {
+		float:left;
+		margin:10px;
+		width:220px;
+	}
+	
+	.select_header {
+	border-bottom:1px solid #ff7d00;
+	font-weight:600;
+	margin:0 0 5px 0;
+	}
+	.check {
+		float:left;
+		width:110px;
+		
+		&.large {
+			width:200px;
+		}
+		input {
+			margin-right:5px; 
+		}
+	}
+}
+
+.toggle {
+	@include border-radius(5px);
+  	padding:10px;
+  	height:auto;
+  	text-align:center;
+  	
+  	.search {
+  		margin-bottom:5px;
+  	}
+  	
+  	.image {
+  		max-width:15px;
+  	} 	
+}
+
+.fixed {
+	width:inherit;
+	position: fixed;  
+    left: inherit;  
+    top: 0;  
+    z-index: 100;   
+}
+
+.message {
+	float:left;
+	color:red;
+	display:none;
+	margin-top:5px;
+	font-size:18px;
+}

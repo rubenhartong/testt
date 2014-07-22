@@ -1,0 +1,25 @@
+<div class="search-form">
+          
+<!--        <a href="newEvent/newEvent.jsp"><input type="submit" value="Event toevoegen" class="button-menu" /></a> -->
+        <ul class='nav'>
+        	<li><input type="image" src="assets/img/settings.png" width=30px /></li>
+        	<ul class='sub'>
+        		<li>  <a href="newEvent/newUsers.jsp">Gebruikers</a></li>
+        		<li><a href="newEvent/newLocation.jsp">Locaties</a></li>
+        		<li>  <a href="Aanmaken/mail_template.jsp">Mail template</a></li>
+        		<li><a href="changeMailing.jsp">Verander email</a></li>
+        		<li><a href="changeKey.jsp">Zoho</a></li>
+        		<li><a href="changePass.jsp">Wachtwoord</a></li> 
+        		<li><a href="logUit.jsp">Log uit</a></li>
+        	</ul>
+        </ul>
+      
+            <form method="post" action="eOverzicht.jsp">
+                <input type="text" id="searchField" class="search-input" name="id" placeholder="Search" />
+            </form>
+            <select class="checkbox" name="select">
+            	<option value="1">Alle events</option>
+            	<option value="2">Past events</option>
+            	<option value="3">Upcoming events</option>
+			</select>
+</div>

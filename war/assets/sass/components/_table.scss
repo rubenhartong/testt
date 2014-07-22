@@ -1,0 +1,76 @@
+.table {
+  font-size: 12px;
+  text-align: left;
+  border-collapse: collapse;
+  width:950px;
+  margin:30px auto 30px auto;
+  table-layout: fixed;
+  
+  th {
+    background:$wall ;
+    color:black;
+    font-weight: bold;
+    padding: 10px 8px;
+    border-bottom:1px solid $table-bottom;
+    
+    &.checkbox {
+    	width: 3%;
+    }
+     &.size150 {
+    	width:150px;
+    }
+     &.size200 {
+    	width: 200px;
+    }
+
+    &.datumCol{
+      width:80px;
+    }
+    &.large {
+    width:55%;
+    }
+  }
+  .clickable {
+    	cursor:pointer;
+    }
+     .alert{
+	background:#FFCC99;
+}
+  tr {
+    background: $wallwhite;
+    td {
+      padding: 4px 4px 4px 9px;
+      padding-right:25px;
+      color: #6f6f6f;
+      word-wrap:break-word;
+    }
+    .small {
+    width:60px;
+    }
+    .green {
+	color:green;
+}
+
+	.red {
+	color:red;
+	}
+}
+.odd {
+      background:$oddcolor;
+    }
+    tr:hover {
+      background: #ffe6cf;
+      color: #333333;
+  }
+  
+}
+.genodigden, .invited {
+	cursor:pointer;
+}
+
+.icon_status {
+width: auto;
+height: 20px;
+
+}
+

@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+ xmlns="http://java.sun.com/xml/ns/javaee" 
+ xmlns:web="http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd" 
+ xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee 
+ http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd" 
+ version="2.4"> 
+ <!-- Session Configuration -->
+<session-config>
+        <session-timeout>60</session-timeout>
+</session-config>
+
+ <error-page>
+        <error-code>404</error-code>
+        <location>/error.jsp</location>
+        <!-- <location>displayException</location> -->
+</error-page>
+
+<welcome-file-list>
+    <welcome-file>eOverzicht.jsp</welcome-file>
+</welcome-file-list>
+
+ <!-- servlet login-->
+ <servlet> 
+ 		<servlet-name>inloggen</servlet-name> 
+ 		<servlet-class>servlets.LoginServlet</servlet-class> 
+ 	</servlet> 
+ 	<servlet-mapping>
+   	<servlet-name>inloggen</servlet-name> 
+ 		<url-pattern>/Inloggen.do</url-pattern> 
+ 	</servlet-mapping> 	
+ 	
+ 	<!-- servlet event aanpassen-->
+ 	<servlet> 
+ 		<servlet-name>eventAanpassen</servlet-name> 
+ 		<servlet-class>servlets.EventAanpassenServlet</servlet-class> 
+ 	</servlet>  
+ 	<servlet-mapping> 
+   	<servlet-name>eventAanpassen</servlet-name> 
+ 		<url-pattern>/EventAanpassen.do</url-pattern> 
+ 	</servlet-mapping> 
+ 	
+ <!-- servlet gebruiker toevoegen-->
+  	<servlet> 
+ 		<servlet-name>addUser</servlet-name> 
+ 		<servlet-class>servlets.AddUserServlet</servlet-class> 
+ 	</servlet>  
+ 	<servlet-mapping> 
+   	<servlet-name>addUser</servlet-name> 
+ 		<url-pattern>/AddUser.do</url-pattern> 
+ 	</servlet-mapping> 
+ 	
+ <!-- servlet api key aanpassen-->
+  	<servlet> 
+ 		<servlet-name>changeKey</servlet-name> 
+ 		<servlet-class>servlets.ChangeKey</servlet-class> 
+ 	</servlet>  
+ 	<servlet-mapping> 
+   	<servlet-name>changeKey</servlet-name> 
+ 		<url-pattern>/changeKey.do</url-pattern> 
+ 	</servlet-mapping> 
+ 	
+ <!-- servlet wachtwoord aanpassen-->
+  	<servlet> 
+ 		<servlet-name>changePass</servlet-name> 
+ 		<servlet-class>servlets.changePassServlet</servlet-class> 
+ 	</servlet>  
+ 	<servlet-mapping> 
+   	<servlet-name>changePass</servlet-name> 
+ 		<url-pattern>/changePass.do</url-pattern> 
+ 	</servlet-mapping> 
+ 	
+ 	 <!-- servlet email aanpassen-->
+  	<servlet> 
+ 		<servlet-name>changeMail</servlet-name> 
+ 		<servlet-class>servlets.changeMailServlet</servlet-class> 
+ 	</servlet>  
+ 	<servlet-mapping> 
+   	<servlet-name>changeMail</servlet-name> 
+ 		<url-pattern>/changeMail.do</url-pattern> 
+ 	</servlet-mapping> 
+ 	
+   <!-- servlet mail aanmaken of wijzigen-->
+    	<servlet> 
+ 		<servlet-name>CreateMail</servlet-name> 
+ 		<servlet-class>servlets.CreateMailServlet</servlet-class> 
+ 	</servlet>  
+ 	<servlet-mapping> 
+   	<servlet-name>CreateMail</servlet-name> 
+ 		<url-pattern>/CreateMail.do</url-pattern> 
+ 	</servlet-mapping> 
+   
+   <!-- servlet mailtemplate aanmaken of wijzigen-->
+    	<servlet> 
+ 		<servlet-name>CreateTemplate</servlet-name> 
+ 		<servlet-class>servlets.CreateTemplateServlet</servlet-class> 
+ 	</servlet>  
+ 	<servlet-mapping> 
+   	<servlet-name>CreateTemplate</servlet-name> 
+ 		<url-pattern>/CreateTemplate.do</url-pattern> 
+ 	</servlet-mapping> 
+ 	
+    <!-- servlet evenement opslaan-->
+     	<servlet> 
+ 		<servlet-name>eventToevoegen</servlet-name> 
+ 		<servlet-class>servlets.EventToevoegenServlet</servlet-class> 
+ 	</servlet>  
+ 	<servlet-mapping> 
+   	<servlet-name>eventToevoegen</servlet-name> 
+ 		<url-pattern>/EventToevoegen.do</url-pattern> 
+ 	</servlet-mapping> 
+ 	
+     <!-- servlet evenement toevoegen-->
+      	<servlet> 
+ 		<servlet-name>eventStore</servlet-name> 
+ 		<servlet-class>servlets.EventStoreServlet</servlet-class> 
+ 	</servlet>  
+ 	<servlet-mapping> 
+   	<servlet-name>eventStore</servlet-name> 
+ 		<url-pattern>/EvenStoreServlet.do</url-pattern> 
+ 	</servlet-mapping> 
+ 	
+      <!-- servlet locatie toevoegen-->
+     	<servlet> 
+ 		<servlet-name>LocatieToevoegen</servlet-name> 
+ 		<servlet-class>servlets.LocatieToevoegenServlet</servlet-class> 
+ 	</servlet>  
+ 	<servlet-mapping> 
+   	<servlet-name>LocatieToevoegen</servlet-name> 
+ 		<url-pattern>/LocatieToevoegen.do</url-pattern> 
+ 	</servlet-mapping> 
+ 	
+       <!-- servlet programma toevoegen-->
+     	<servlet> 
+ 		<servlet-name>ProgrammaToevoegen</servlet-name> 
+ 		<servlet-class>servlets.ProgrammaToevoegenServlet</servlet-class> 
+ 	</servlet>  
+ 	<servlet-mapping> 
+   	<servlet-name>ProgrammaToevoegen</servlet-name> 
+ 		<url-pattern>/ProgrammaToevoegen.do</url-pattern> 
+ 	</servlet-mapping> 
+ 	
+ 	    <!-- servlet enkele mail versturen-->
+ 	     	<servlet> 
+ 		<servlet-name>SingleMail</servlet-name> 
+ 		<servlet-class>servlets.singleMailServlet</servlet-class> 
+ 	</servlet>  
+ 	<servlet-mapping> 
+   	<servlet-name>SingleMail</servlet-name> 
+ 		<url-pattern>/SingleMail.do</url-pattern> 
+ 	</servlet-mapping> 
+ 	
+ 	<!-- servlet alle contacten vervangen-->
+ 	     	<servlet> 
+ 		<servlet-name>ContactsZoho</servlet-name> 
+ 		<servlet-class>servlets.syncContacts</servlet-class> 
+ 	</servlet>  
+ 	<servlet-mapping> 
+   	<servlet-name>ContactsZoho</servlet-name> 
+ 		<url-pattern>/cyncContacts.do</url-pattern> 
+ 	</servlet-mapping> 
+ 		
+ 	<!-- servlet alle contacten verwijderen-->
+ 	     	<servlet> 
+ 		<servlet-name>DeleteContacts</servlet-name> 
+ 		<servlet-class>servlets.DeleteContactsServlet</servlet-class> 
+ 	</servlet>  
+ 	<servlet-mapping> 
+   	<servlet-name>DeleteContacts</servlet-name> 
+ 		<url-pattern>/DeleteContacts.do</url-pattern> 
+ 	</servlet-mapping> 
+ 	
+</web-app> 
