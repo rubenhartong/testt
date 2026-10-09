@@ -136,14 +136,14 @@
     <div class="card">
       <div class="label">Praktisch</div>
       <ul class="acts">
-        <li><span><b>Ingang E of Q</b> — staat op je ticket, andere ingang kan niet. Q ligt aan de noordkant (podiumkant). Bij Qlimax 2022 was de rij bij E korter.</span></li>
+        <li><span><b>Ingang E of Q</b> — staat op je ticket, andere ingang kan niet. Beide aan de achterkant, tegenover het podium. Bij Qlimax 2022 was de rij bij E korter.</span></li>
         <li><span><b>Lockers</b> — medium €13 via ticketshop (large uitverkocht). Bij Qlimax stonden ze <b>buiten</b> en kon je er tijdens het feest niet meer bij: neem mee wat je de hele nacht nodig hebt.</span></li>
         <li><span><b>Betalen</b> — GelreDome-cashcard, opwaarderen bij oplaadpunten.</span></li>
         <li><span><b>WC's</b> — in de omloop, je loopt van de vloer naar buiten. Reviews: genoeg en meestal schoon.</span></li>
         <li><span><b>Water</b> — bij Qlimax gratis kraanwater bij de WC's; eigen flesje mocht niet mee, barflesje bijvullen wel.</span></li>
         <li><span><b>Roken</b> — alleen buiten, bij ingang E en Q.</span></li>
-        <li><span><b>Omloop</b> — dicht ter hoogte van het podium (noord): om van west naar oost te gaan loop je via de zuidkant.</span></li>
-        <li><span><b>Vervoer</b> — pendelbus Arnhem Centraal ↔ GelreDome €5,90 (kaartje op station). Taxi/kiss&ride aan de noordkant.</span></li>
+        <li><span><b>Omloop</b> — dicht ter hoogte van het podium: om van de ene lange zijde naar de andere te gaan loop je via de achterkant (ingangen).</span></li>
+        <li><span><b>Vervoer</b> — pendelbus Arnhem Centraal ↔ GelreDome €5,90 (kaartje op station). Taxi/kiss&ride aan de noordkant van het terrein.</span></li>
       </ul>
       <p class="muted">Gebaseerd op Hardtraxx, GelreDome, Q-dance (Qlimax) en reviews. Check borden ter plekke.</p>
     </div>
@@ -288,62 +288,62 @@ document.getElementById('timesReset').onclick = () => { timeOverrides = {}; stor
 
 // ---------- Plattegrond (schematisch, coördinaten 0–1000 x 0–760) ----------
 function schematicSVG() {
-  // Concertopstelling GelreDome: podium aan de noordzijde, noordtribune + omloop daar dicht.
-  // Tribunenamen volgens Vitesse. Ingang Q hoort bij de noordtribune; ingang E: plek niet gevonden.
+  // Concertopstelling: podium aan de korte (noord)zijde, ingangen aan de achterkant (zuid).
+  // Lange zijden = oost/west. Tribune achter het podium + omloop daar dicht.
   let sectors = '';
-  for (let i = 1; i < 8; i++) { const x = 170 + i * 82.5; sectors += `<line x1="${x}" y1="630" x2="${x}" y2="730"/>`; }
-  for (let i = 1; i < 5; i++) { const y = 160 + i * 94; sectors += `<line x1="70" y1="${y}" x2="170" y2="${y}"/><line x1="830" y1="${y}" x2="930" y2="${y}"/>`; }
-  // scheiding onderring (binnen) / bovenring (buiten)
-  const ringSplit = `<path d="M120 160 V680 H880 V160" fill="none" stroke="#55556e" stroke-width="2" stroke-dasharray="6 6"/>`;
-  return `<svg viewBox="0 0 1000 800" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">
-    <rect width="1000" height="800" fill="#0e0e14"/>
+  for (let i = 1; i < 5; i++) { const x = 160 + i * 76; sectors += `<line x1="${x}" y1="800" x2="${x}" y2="900"/>`; }
+  for (let i = 1; i < 6; i++) { const y = 170 + i * 105; sectors += `<line x1="60" y1="${y}" x2="160" y2="${y}"/><line x1="540" y1="${y}" x2="640" y2="${y}"/>`; }
+  return `<svg viewBox="0 0 700 1040" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">
+    <rect width="700" height="1040" fill="#0e0e14"/>
     <!-- omloop (ring) -->
-    <rect x="30" y="60" width="940" height="710" rx="130" fill="#1a1a24" stroke="#4a4a60" stroke-width="2"/>
-    <text x="500" y="760" fill="#77778c" font-size="14" text-anchor="middle">OMLOOP — WC's, bars, merch</text>
+    <rect x="20" y="60" width="660" height="880" rx="110" fill="#1a1a24" stroke="#4a4a60" stroke-width="2"/>
+    <line x1="150" y1="62" x2="550" y2="62" stroke="#ff3b3b" stroke-width="5" stroke-dasharray="14 10"/>
+    <text x="350" y="40" fill="#ff6b7d" font-size="15" font-weight="700" text-anchor="middle">✕ omloop dicht ter hoogte van het podium</text>
+    <text x="40" y="520" fill="#77778c" font-size="13" text-anchor="middle" transform="rotate(-90 40 520)">OMLOOP · WC's · bars</text>
+    <text x="660" y="520" fill="#77778c" font-size="13" text-anchor="middle" transform="rotate(90 660 520)">OMLOOP · WC's · bars</text>
     <!-- tribunes -->
-    <rect x="70" y="100" width="860" height="630" rx="100" fill="#262636" stroke="#3a3a4e" stroke-width="2"/>
+    <rect x="60" y="100" width="580" height="800" rx="90" fill="#262636" stroke="#3a3a4e" stroke-width="2"/>
     <g stroke="#3a3a4e" stroke-width="2">${sectors}</g>
-    ${ringSplit}
+    <path d="M110 170 V850 H590 V170" fill="none" stroke="#55556e" stroke-width="2" stroke-dasharray="6 6"/>
     <g fill="#6c6c84" font-size="12" text-anchor="middle">
-      <text x="250" y="664">onderring</text><text x="250" y="716">bovenring</text>
-      <text x="750" y="664">onderring</text><text x="750" y="716">bovenring</text>
+      <text x="230" y="830">onderring</text><text x="230" y="882">bovenring</text>
+      <text x="470" y="830">onderring</text><text x="470" y="882">bovenring</text>
     </g>
-    <!-- noordtribune dicht -->
-    <path d="M170 100 H830 V160 H170 Z" fill="#1b1b22"/>
-    <g stroke="#ff3b3b" stroke-width="5" stroke-dasharray="14 10">
-      <line x1="230" y1="62" x2="770" y2="62"/>
-    </g>
-    <text x="500" y="88" fill="#ff6b7d" font-size="14" font-weight="700" text-anchor="middle">✕ omloop dicht ter hoogte van het podium</text>
-    <text x="500" y="138" fill="#5d5d70" font-size="16" font-weight="700" text-anchor="middle">Noord · Edward Sturing — afgesloten</text>
-    <text x="500" y="687" fill="#9a9aae" font-size="20" font-weight="700" text-anchor="middle">Tribune Zuid · Theo Bos</text>
-    <text x="120" y="400" fill="#9a9aae" font-size="20" font-weight="700" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 120 400)">West · Just Göbel</text>
-    <text x="880" y="400" fill="#9a9aae" font-size="20" font-weight="700" text-anchor="middle" dominant-baseline="middle" transform="rotate(90 880 400)">Oost · Charly Bosveld</text>
+    <path d="M140 100 H560 V170 H140 Z" fill="#1b1b22"/>
+    <text x="350" y="142" fill="#5d5d70" font-size="15" font-weight="700" text-anchor="middle">tribune achter podium — afgesloten</text>
+    <text x="350" y="860" fill="#9a9aae" font-size="18" font-weight="700" text-anchor="middle">Zuid · Theo Bos</text>
+    <text x="135" y="485" fill="#9a9aae" font-size="16" font-weight="700" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 135 485)">West · Just Göbel (lange zijde)</text>
+    <text x="565" y="485" fill="#9a9aae" font-size="16" font-weight="700" text-anchor="middle" dominant-baseline="middle" transform="rotate(90 565 485)">Oost · Charly Bosveld (lange zijde)</text>
     <!-- vloer -->
-    <rect x="170" y="160" width="660" height="470" rx="30" fill="#151a17" stroke="#2f3d33" stroke-width="3"/>
-    <text x="500" y="540" fill="#5f7a66" font-size="22" font-weight="700" text-anchor="middle">VLOER</text>
-    <!-- podium noordzijde -->
-    <rect x="320" y="160" width="360" height="85" fill="#2a1015" stroke="#ff2e4d" stroke-width="4"/>
-    <text x="500" y="210" fill="#fff" font-size="26" font-weight="800" text-anchor="middle">PODIUM</text>
-    <!-- ingang Q -->
-    <g><rect x="440" y="8" width="120" height="34" rx="8" fill="#ff2e4d"/>
-      <text x="500" y="31" fill="#fff" font-size="16" font-weight="800" text-anchor="middle">Ingang Q ↓</text></g>
-    <text x="500" y="795" fill="#555569" font-size="12" text-anchor="middle">Schematisch. Q = noordkant (welke hoek ?). Ingang E: zet zelf een pin als je binnen bent.</text>
+    <rect x="160" y="170" width="380" height="630" rx="24" fill="#151a17" stroke="#2f3d33" stroke-width="3"/>
+    <text x="350" y="640" fill="#5f7a66" font-size="22" font-weight="700" text-anchor="middle">VLOER</text>
+    <!-- podium korte zijde -->
+    <rect x="190" y="170" width="320" height="85" fill="#2a1015" stroke="#ff2e4d" stroke-width="4"/>
+    <text x="350" y="221" fill="#fff" font-size="26" font-weight="800" text-anchor="middle">PODIUM</text>
+    <!-- ingangen achterkant -->
+    <rect x="200" y="958" width="300" height="38" rx="8" fill="#ff2e4d"/>
+    <text x="350" y="983" fill="#fff" font-size="17" font-weight="800" text-anchor="middle">↑ Ingangen E &amp; Q (achterkant)</text>
+    <text x="350" y="1025" fill="#555569" font-size="12" text-anchor="middle">Schematisch. Zet bij binnenkomst een pin bij jouw ingang.</text>
   </svg>`;
 }
 
 function zoneOf(x, y) { // x,y 0..1 → {kind, name, ring}
-  const px = x * 1000, py = y * 800;
-  if (px > 170 && px < 830 && py > 160 && py < 630) {
-    if (py < 250 && px > 320 && px < 680) return { kind: 'floor', name: 'vooraan bij het podium' };
-    const d = py < 320 ? 'voorin' : py < 480 ? 'midden' : 'achterin';
-    const h = px < 390 ? ' links' : px > 610 ? ' rechts' : '';
+  const px = x * 700, py = y * 1040;
+  if (px > 160 && px < 540 && py > 170 && py < 800) {
+    if (py < 260 && px > 190 && px < 510) return { kind: 'floor', name: 'vooraan bij het podium' };
+    const d = py < 380 ? 'voorin' : py < 600 ? 'midden' : 'achterin';
+    const h = px < 280 ? ' links' : px > 420 ? ' rechts' : '';
     return { kind: 'floor', name: `op de vloer, ${d}${h} (kijkend naar podium)` };
   }
-  if (!(px > 70 && px < 930 && py > 100 && py < 730))
-    return { kind: 'out', name: py < 100 ? 'bij ingang Q (noord)' : 'in de omloop' + (py > 600 ? ' (zuid)' : px < 500 ? ' (west)' : ' (oost)') };
-  if (py <= 160) return { kind: 'out', name: 'Tribune Noord (afgesloten)' };
-  const ring = (py >= 680 || px <= 120 || px >= 880) ? 'boven' : 'onder';
-  const name = py >= 630 ? 'Tribune Zuid (Theo Bos)' : px < 500 ? 'Tribune West (Just Göbel)' : 'Tribune Oost (Charly Bosveld)';
+  if (px <= 60 || px >= 640 || py <= 100 || py >= 900) {
+    if (py >= 940) return { kind: 'out', name: 'bij de ingangen (achterkant)' };
+    if (py >= 900) return { kind: 'out', name: 'in de omloop, achterkant' };
+    if (py <= 100) return { kind: 'out', name: 'in de omloop, podiumkant' };
+    return { kind: 'out', name: `in de omloop, ${px < 350 ? 'west' : 'oost'}kant` };
+  }
+  if (py <= 170) return { kind: 'out', name: 'tribune achter podium (afgesloten)' };
+  const ring = (py >= 850 || px <= 110 || px >= 590) ? 'boven' : 'onder';
+  const name = py >= 800 ? 'Tribune Zuid (Theo Bos, achterkant)' : px < 350 ? 'Tribune West (Just Göbel)' : 'Tribune Oost (Charly Bosveld)';
   return { kind: 'stand', name, ring };
 }
 const zoneName = (x, y) => zoneOf(x, y).name;
