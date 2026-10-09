@@ -84,7 +84,14 @@ svg { display: block; overflow: visible; }
 .card-shadow > div:last-child { left: 0; bottom: 0; }
 
 @media (max-aspect-ratio: 3/4) {
+  :root { --s: min(27vw, 17vh, 190px); }
   .card { width: min(46vw, 25vh, 230px); }
+}
+@media (max-height: 520px) {
+  #home { gap: 12px; }
+  #home .logo { font-size: 34px; }
+  .card { width: min(28vw, 64vh, 250px); padding: 8%; }
+  .card b { font-size: 16px; }
 }
 
 .gear { position: absolute; top: 12px; right: 12px; width: 52px; height: 52px; display: grid; place-items: center; opacity: .55; }
