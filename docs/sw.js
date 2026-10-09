@@ -1,5 +1,5 @@
 // Cache-first: na één keer openen werkt alles zonder internet.
-const CACHE = 'hardbass-v2';
+const CACHE = 'hardbass-v3';
 const ASSETS = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
