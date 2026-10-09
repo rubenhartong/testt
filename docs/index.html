@@ -150,6 +150,7 @@
     <div class="card">
       <div class="label">Offline</div>
       <p id="offlineStatus" class="muted">Controleren…</p>
+      <p class="muted">Versie: v5 (staande kaart)</p>
       <p class="muted">Tip: zet de app vandaag op je beginscherm (Delen → "Zet op beginscherm" of browsermenu → "App installeren") en open hem één keer, dan werkt alles zonder internet.</p>
     </div>
     <div class="card">
@@ -540,7 +541,14 @@ window.addEventListener('online', renderNet); window.addEventListener('offline',
 // ---------- Offline (service worker) ----------
 const offEl = document.getElementById('offlineStatus');
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  navigator.serviceWorker.register('sw.js').then(() => navigator.serviceWorker.ready)
+  // Nieuwe versie actief → één keer automatisch herladen
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController && !reloaded && !placing && !document.querySelector('dialog[open]')) { reloaded = true; location.reload(); }
+  });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+    .then(reg => { document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); }); return navigator.serviceWorker.ready; })
     .then(() => { offEl.textContent = '✅ App is opgeslagen op je toestel en werkt zonder internet.'; })
     .catch(() => { offEl.textContent = '⚠️ Offline-opslag niet beschikbaar in deze browser. Laat dit tabblad open staan.'; });
 } else {
