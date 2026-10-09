@@ -67,12 +67,12 @@ svg { display: block; overflow: visible; }
     linear-gradient(var(--sky-hi), var(--sky));
 }
 #home .logo { font-size: clamp(34px, 6vw, 64px); }
-.cards { display: grid; grid-template-columns: repeat(3, auto); justify-content: center; gap: clamp(12px, 2.6vw, 28px); }
+.cards { --cw: min(20vw, 30vh, 200px); --cg: clamp(12px, 2.4vw, 24px); display: flex; flex-wrap: wrap; justify-content: center; gap: var(--cg); max-width: calc(4 * var(--cw) + 3 * var(--cg)); }
 .card {
-  width: min(25vw, 31vh, 220px); aspect-ratio: 1; border-radius: 28%;
+  width: var(--cw); height: var(--cw); border-radius: 28%;
   background: var(--paper); box-shadow: 0 8px 0 rgba(43,58,85,.18), 0 16px 28px rgba(43,58,85,.16);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4%;
-  padding: 10%; transition: transform .15s;
+  padding: calc(var(--cw) * .1); transition: transform .15s;
 }
 .card:active { transform: scale(.95); }
 .card .card-art { width: 86%; flex: 1 1 0; min-height: 0; position: relative; }
@@ -85,13 +85,13 @@ svg { display: block; overflow: visible; }
 
 @media (max-aspect-ratio: 3/4) {
   :root { --s: min(27vw, 17vh, 190px); }
-  .cards { grid-template-columns: repeat(2, auto); }
-  .card { width: min(42vw, 23vh, 220px); }
+  .cards { --cw: min(40vw, 19vh, 220px); max-width: calc(2 * var(--cw) + var(--cg)); }
 }
 @media (max-height: 520px) {
   #home { gap: 12px; }
   #home .logo { font-size: 34px; }
-  .card { width: min(22vw, 35vh, 220px); padding: 8%; }
+  .cards { --cw: min(20vw, 34vh, 200px); }
+  .card { padding: calc(var(--cw) * .08); }
   .card b { font-size: 16px; }
 }
 
@@ -267,6 +267,27 @@ svg { display: block; overflow: visible; }
 .gap.filled::after { display: none; }
 .r-train { position: absolute; left: 0; z-index: 4; }
 
+/* Tellen */
+.scene-count {
+  background:
+    radial-gradient(90% 40% at 50% 100%, var(--grass-lo) 60%, transparent 61%),
+    linear-gradient(var(--sky-hi), var(--sky) 42%, var(--grass) 42%);
+}
+.scene-count #board { justify-content: space-between; --cs: min(calc(var(--s) * .85), calc((100vw - 72px) / 5)); }
+.count-num { font-weight: 800; font-size: clamp(56px, 13vh, 130px); line-height: 1; color: var(--coral); min-height: 1em; font-variant-numeric: tabular-nums; }
+.count-num.pop { animation: popin .35s cubic-bezier(.3,1.6,.5,1); }
+.cslots { display: flex; justify-content: center; gap: 10px; padding-bottom: calc(var(--cs) * .5); }
+.cslot { position: relative; width: var(--cs); aspect-ratio: 1; border: 3px dashed rgba(43,58,85,.35); border-radius: 50%; transition: border-color .3s; }
+.cslot.full { border-color: transparent; }
+.cslot .zone { position: absolute; inset: 4%; }
+.clabel { position: absolute; left: 0; right: 0; top: 102%; text-align: center; font-weight: 800; font-size: calc(var(--cs) * .4); line-height: 1; color: var(--ink); }
+.clabel:empty { display: none; }
+.clabel { animation: popin .35s cubic-bezier(.3,1.6,.5,1); }
+.meadow { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: clamp(8px, 3vw, 28px); max-width: calc(var(--s) * 3.4); margin-block: auto; }
+.cspot { position: relative; width: calc(var(--s) * .9); height: calc(var(--s) * .9); }
+.cslot .item.placed .art { animation: none; }
+.cslot .item.hopnow .art { animation: hop .5s cubic-bezier(.3,1.6,.5,1); }
+
 /* ---------- Welterusten ---------- */
 #bed { justify-content: center; gap: clamp(10px, 3vh, 28px); padding: 16px; background: #3b4a7a; transition: background 1.2s; }
 #bed.dark { background: #121a33; }
@@ -368,6 +389,7 @@ svg { display: block; overflow: visible; }
     <button class="card" data-game="tunnel" aria-label="Tunnel"><div class="card-art" id="art-tunnel"></div><b>Tunnel</b></button>
     <button class="card" data-game="wash" aria-label="Wasstraat"><div class="card-art" id="art-wash"></div><b>Wasstraat</b></button>
     <button class="card" data-game="rails" aria-label="Spoor"><div class="card-art" id="art-rails"></div><b>Spoor</b></button>
+    <button class="card" data-game="count" aria-label="Tellen"><div class="card-art" id="art-count"></div><b>Tellen</b></button>
   </div>
   <button class="moon-home" id="home-moon" aria-label="Naar bed"><svg viewBox="0 0 30 30"><path d="M19 3 A12.5 12.5 0 1 0 27 21 A10 10 0 0 1 19 3 Z" fill="#ffd96a" stroke="#2b3a55" stroke-width="2.5" stroke-linejoin="round"/></svg></button>
   <button class="gear" id="gear" aria-label="Instellingen voor ouders, 2 seconden ingedrukt houden">
@@ -1159,6 +1181,84 @@ svg { display: block; overflow: visible; }
     endArt: () => locoSVG(),
     endLine: 'Klaar! Het spoor is helemaal heel. Goed gedaan!',
   };
+
+  /* ---------- Spel 7: Tellen ---------- */
+  const NUM = ['', 'één', 'twee', 'drie', 'vier', 'vijf'];
+  const NOTES = [523, 587, 659, 698, 784];
+  const COUNT_KINDS = {
+    koe: { one: 'koe', many: 'koeien' }, varken: { one: 'varken', many: 'varkens' }, poes: { one: 'poes', many: 'poezen' },
+    schaap: { one: 'schaap', many: 'schapen' }, eend: { one: 'eend', many: 'eenden' }, kikker: { one: 'kikker', many: 'kikkers' },
+    auto: { one: 'auto', many: "auto's" },
+  };
+  $('#art-count').innerHTML = `<svg viewBox="0 0 120 100" aria-hidden="true">
+    ${nest(animalSVG('eend'), 2, 44, 38, 38)}${nest(animalSVG('eend'), 41, 44, 38, 38)}${nest(animalSVG('eend'), 80, 44, 38, 38)}
+    <g font-family="'Baloo 2', ui-rounded, system-ui, sans-serif" font-weight="800" font-size="30" text-anchor="middle"><text x="21" y="32" fill="#ff6b5a">1</text><text x="60" y="32" fill="#2f80ed">2</text><text x="99" y="32" fill="#3a9a4f">3</text></g></svg>`;
+  GAMES.count = {
+    setup() {
+      board.innerHTML = `<div class="sun"></div><div class="count-num" id="cnum"></div><div class="cslots" id="cslots"></div><div class="meadow" id="meadow"></div>`;
+      G.lastKind = null;
+    },
+    round(r) {
+      const counts = G.total >= 5 ? [2, 3, 4, 5, 5] : [3, 4, 5];
+      const n = counts[Math.min(r - 1, counts.length - 1)];
+      const kind = randomOther(Object.keys(COUNT_KINDS), G.lastKind);
+      G.lastKind = kind; G.n = n; G.counted = 0; G.phase = 'count';
+      $('#cnum').textContent = '';
+      const slots = $('#cslots');
+      slots.innerHTML = Array.from({ length: n }, () => '<div class="cslot"><div class="zone"></div><div class="clabel"></div></div>').join('');
+      G.slots = [...slots.children];
+      const cols = shuffle(Object.keys(COLORS));
+      const meadow = $('#meadow');
+      meadow.innerHTML = '';
+      for (let i = 0; i < n; i++) {
+        const spot = document.createElement('div');
+        spot.className = 'cspot';
+        spot.style.marginTop = Math.floor(Math.random() * 24) + 'px';
+        const it = document.createElement('div');
+        it.className = 'item enter';
+        it.style.animationDelay = (i * .12) + 's';
+        it.innerHTML = `<div class="art" style="animation-delay:${(-Math.random() * 2.6).toFixed(2)}s">${kind === 'auto' ? carSVG(COLORS[cols[i % cols.length]].hex) : animalSVG(kind)}</div>`;
+        it.addEventListener('pointerdown', countTap);
+        spot.appendChild(it); meadow.appendChild(spot);
+        setTimeout(() => it.classList.remove('enter'), 900);
+      }
+      say(`Tel je mee? Tik op elke ${COUNT_KINDS[kind].one}.`);
+    },
+    endArt: () => animalSVG('eend'),
+    endLine: 'Klaar! Wat kun jij goed tellen!',
+  };
+  function countTap(e) {
+    e.preventDefault(); e.stopPropagation();
+    const el = e.currentTarget;
+    if (!G || G.name !== 'count' || G.phase !== 'count' || el.dataset.done) return;
+    audioInit();
+    el.dataset.done = '1';
+    const num = ++G.counted;
+    const slot = G.slots[num - 1];
+    slot.classList.add('full');
+    tone({ f: NOTES[num - 1], d: .3, v: .18 });
+    say(NUM[num]);
+    const cn = $('#cnum');
+    cn.textContent = num; cn.classList.remove('pop'); void cn.offsetWidth; cn.classList.add('pop');
+    liftToLayer(el, el.getBoundingClientRect());
+    flyTo(el, slot.querySelector('.zone'), () => {
+      slot.querySelector('.clabel').textContent = num;
+      if (num === G.n) { G.phase = 'recap'; later(countRecap, 900); }
+    });
+  }
+  function countRecap() {
+    const n = G.n, kind = COUNT_KINDS[G.lastKind];
+    say('Nog een keer samen!');
+    G.slots.forEach((slot, i) => later(() => {
+      const it = slot.querySelector('.item');
+      it.classList.remove('hopnow'); void it.offsetWidth; it.classList.add('hopnow');
+      tone({ f: NOTES[i], d: .3, v: .18 });
+      say(NUM[i + 1]);
+      const cn = $('#cnum'); cn.textContent = i + 1; cn.classList.remove('pop'); void cn.offsetWidth; cn.classList.add('pop');
+    }, 1500 + i * 850));
+    later(() => { sfx.done(); say(`${cap(NUM[n])} ${kind.many}!`); }, 1500 + n * 850 + 200);
+    later(() => nextRound(), 1500 + n * 850 + 2800);
+  }
 
   /* ---------- Welterusten ---------- */
   let bedKeys = [];
