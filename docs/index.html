@@ -95,6 +95,7 @@
   .who-grid button.on { outline: 2px solid var(--c); }
   .pin.mine svg { width: 42px; height: 42px; }
   .pin.stale { opacity: .45; }
+  #routeSvg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   .fld { flex: 1 1 0; min-width: 0; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
 </style>
 </head>
@@ -122,6 +123,24 @@
       <button id="btnSync">🔄 Ververs</button>
     </div>
     <div id="syncStatus" class="muted" style="margin:-2px 0 10px"></div>
+    <div id="findCard" class="card" hidden style="border-color:var(--fc)">
+      <div class="row" style="flex-wrap:nowrap;align-items:center;gap:14px">
+        <svg id="findArrow" viewBox="0 0 100 100" style="flex:0 0 96px;width:96px;height:96px;transition:transform .25s">
+          <circle cx="50" cy="50" r="47" fill="none" stroke="var(--line)" stroke-width="3"/>
+          <path d="M50 8 L74 70 L50 58 L26 70 Z" fill="var(--fc)"/>
+        </svg>
+        <div style="min-width:0">
+          <div class="label" id="findName"></div>
+          <div class="big" id="findDist" style="margin:2px 0"></div>
+          <div class="muted" id="findHint"></div>
+        </div>
+      </div>
+      <div class="muted" id="findCompassTip" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:10px">
+        <button id="btnCompass">🧭 Kompas aan</button>
+        <button id="btnFindStop">Stop</button>
+      </div>
+    </div>
     <div id="mapWrap"><div id="mapInner"></div></div>
     <div class="row" style="margin-top:10px">
       <button id="zoomOut">−</button><button id="zoomIn">+</button>
@@ -156,7 +175,7 @@
     <div class="card">
       <div class="label">Offline</div>
       <p id="offlineStatus" class="muted">Controleren…</p>
-      <p class="muted">Versie: v6 (groepskaart)</p>
+      <p class="muted">Versie: v7 (zoek iemand)</p>
       <p class="muted">Tip: zet de app vandaag op je beginscherm (Delen → "Zet op beginscherm" of browsermenu → "App installeren") en open hem één keer, dan werkt alles zonder internet.</p>
     </div>
     <div class="card">
@@ -401,17 +420,19 @@ function renderMap() {
   inner.innerHTML = (custom ? `<img src="${custom}" alt="Plattegrond">` : schematicSVG()) +
     places.map(p => pinHTML(p, p.name, p.color, '')).join('') +
     GROUP.filter(g => group[g.n] && g.n !== me).map(g => pinHTML(group[g.n], g.n, g.c, stale(group[g.n]))).join('') +
-    (me && group[me] ? pinHTML(group[me], me + ' (jij)', colorOf(me), 'mine') : '');
+    (me && group[me] ? pinHTML(group[me], me + ' (jij)', colorOf(me), 'mine') : '') + routeSVG();
+  renderFind();
   document.getElementById('groupList').innerHTML = GROUP.map(g => {
     const p = group[g.n], mine = g.n === me;
     return `<li><span><span class="dot" style="--c:${g.c}"></span><b>${g.n}${mine ? ' (jij)' : ''}</b><br>
       <span class="muted">${p ? `${esc(describe(p))} · ${ago(t - p.t)}` : 'nog geen locatie'}</span></span>
-      ${mine && p && zoneOf(p.x, p.y).kind === 'stand' ? '<button data-edit="me" aria-label="Details">✎</button>' : ''}</li>`;
+      ${mine && p && zoneOf(p.x, p.y).kind === 'stand' ? '<button data-edit="me" aria-label="Details">✎</button>' : ''}
+      ${!mine && p ? `<button data-find="g:${g.n}" aria-label="Zoek ${g.n}">🧭</button>` : ''}</li>`;
   }).join('');
   document.getElementById('placesCard').hidden = !places.length;
   document.getElementById('placeList').innerHTML = places.map(p => `
     <li><span><span class="dot" style="--c:${p.color}"></span><b>${esc(p.name)}</b><br><span class="muted">${esc(describe(p))}</span></span>
-      <span style="display:flex;gap:6px">${zoneOf(p.x, p.y).kind === 'stand' ? `<button data-edit="${p.id}" aria-label="Details">✎</button>` : ''}<button data-del="${p.id}" aria-label="Verwijder">✕</button></span></li>`).join('');
+      <span style="display:flex;gap:6px"><button data-find="p:${p.id}" aria-label="Zoek">🧭</button>${zoneOf(p.x, p.y).kind === 'stand' ? `<button data-edit="${p.id}" aria-label="Details">✎</button>` : ''}<button data-del="${p.id}" aria-label="Verwijder">✕</button></span></li>`).join('');
   renderSync();
 }
 function ago(ms) { const m = Math.round(ms / 60000); return m < 1 ? 'net' : m < 60 ? `${m} min geleden` : `${Math.floor(m / 60)}u ${m % 60}m geleden`; }
@@ -510,11 +531,116 @@ document.getElementById('spotSave').onclick = e => {
 document.getElementById('spotSkip').onclick = e => { e.preventDefault(); closeSpot(); };
 ['groupList', 'placeList'].forEach(id => document.getElementById(id).addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.find) { startFind(b.dataset.find); return; }
   if (b.dataset.edit) { openSpot(b.dataset.edit); return; }
   if (b.dataset.del) { places = places.filter(p => p.id !== b.dataset.del); saveAll(); }
 }));
 document.getElementById('zoomIn').onclick = () => { zoom = Math.min(4, zoom + .5); renderMap(); };
 document.getElementById('zoomOut').onclick = () => { zoom = Math.max(1, zoom - .5); renderMap(); };
+
+// ---------- Zoek iemand: afstand + richting ----------
+// Kaart-eenheden (700 x 1040) → meters. Vloer (380 x 630) ≈ 72 x 120 m: schatting.
+const M_PER_UNIT = 0.19, MAP_W = 700, MAP_H = 1040, BACK_Y = 920;
+let finding = store.get('finding', null);   // 'g:Naam' of 'p:id'
+let heading = null, heading0 = store.get('heading0', null), compassOn = false;
+function findTarget() {
+  if (!finding) return null;
+  const [k, id] = [finding.slice(0, 1), finding.slice(2)];
+  if (k === 'g') return group[id] ? { ...group[id], name: id, color: colorOf(id) } : null;
+  const p = places.find(q => q.id === id); return p ? { ...p, color: p.color } : null;
+}
+const U = p => ({ x: p.x * MAP_W, y: p.y * MAP_H });
+function sideOf(p) { // welke kant van het stadion (voor de route via de omloop)
+  const z = zoneOf(p.x, p.y), u = U(p);
+  if (z.kind === 'floor') return 'floor';
+  if (u.y >= 800) return 'back';
+  return u.x < MAP_W / 2 ? 'west' : 'east';
+}
+function route(a, b) { // lijst punten in kaart-eenheden
+  const A = U(a), B = U(b), sa = sideOf(a), sb = sideOf(b);
+  // omloop bij het podium is dicht: van west naar oost (of andersom) via de achterkant
+  if ((sa === 'west' && sb === 'east') || (sa === 'east' && sb === 'west'))
+    return [A, { x: A.x < 350 ? 40 : 660, y: Math.max(A.y, 200) }, { x: A.x < 350 ? 40 : 660, y: BACK_Y }, { x: B.x < 350 ? 40 : 660, y: BACK_Y }, { x: B.x < 350 ? 40 : 660, y: Math.max(B.y, 200) }, B];
+  return [A, B];
+}
+const len = pts => pts.slice(1).reduce((s, p, i) => s + Math.hypot(p.x - pts[i].x, p.y - pts[i].y), 0);
+function routeSVG() {
+  const t = findTarget(), m = me && group[me];
+  if (!t || !m) return '';
+  const pts = route(m, t).map(p => `${p.x},${p.y}`).join(' ');
+  return `<svg id="routeSvg" viewBox="0 0 ${MAP_W} ${MAP_H}" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="${t.color}" stroke-width="5" stroke-dasharray="12 9" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/></svg>`;
+}
+function clockWord(deg) { // richting t.o.v. "kijkend naar het podium"
+  const d = ((deg % 360) + 360) % 360;
+  return ['recht vooruit (richting podium)', 'schuin rechts vooruit', 'naar rechts', 'schuin rechts achter je',
+    'achter je (richting ingangen)', 'schuin links achter je', 'naar links', 'schuin links vooruit'][Math.round(d / 45) % 8];
+}
+function renderFind() {
+  const card = document.getElementById('findCard'), t = findTarget(), m = me && group[me];
+  card.hidden = !finding;
+  if (!finding) return;
+  card.style.setProperty('--fc', t ? t.color : 'var(--line)');
+  document.getElementById('findName').textContent = t ? `Naar ${t.name}` : 'Niet gevonden';
+  if (!t || !m) {
+    document.getElementById('findDist').textContent = '—';
+    document.getElementById('findHint').textContent = !m ? 'Zet eerst je eigen locatie (📍 Ik sta hier…)' : 'Nog geen locatie bekend';
+    return;
+  }
+  const pts = route(m, t), A = pts[0], next = pts[1];
+  const straight = Math.hypot(U(t).x - A.x, U(t).y - A.y) * M_PER_UNIT, walk = len(pts) * M_PER_UNIT;
+  const r5 = v => Math.max(5, Math.round(v / 5) * 5);
+  document.getElementById('findDist').textContent = `± ${r5(walk)} m`;
+  // kaarthoek naar eerstvolgend routepunt: 0° = richting podium (boven), met de klok mee
+  const mapAngle = Math.atan2(next.x - A.x, -(next.y - A.y)) * 180 / Math.PI;
+  const viaBack = pts.length > 2;
+  let hint = `${clockWord(mapAngle)} als je naar het podium kijkt`;
+  if (viaBack) hint = `Omloop bij podium is dicht: loop via de achterkant (hemelsbreed ± ${r5(straight)} m). Eerst ${clockWord(mapAngle)}.`;
+  const dt = t.spot ? describe(t) : zoneName(t.x, t.y);
+  hint += `<br><b>${esc(t.name)}:</b> ${esc(dt)} · ${ago(Date.now() - t.t)}`;
+  if (straight < 12) hint = `Je bent er bijna! Kijk om je heen 👀<br><b>${esc(t.name)}:</b> ${esc(dt)}`;
+  document.getElementById('findHint').innerHTML = hint;
+  const arrow = document.getElementById('findArrow');
+  const rot = compassOn && heading != null && heading0 != null ? mapAngle - (heading - heading0) : mapAngle;
+  arrow.style.transform = `rotate(${rot}deg)`;
+  document.getElementById('findCompassTip').textContent = compassOn
+    ? (heading0 == null ? 'Richt je telefoon naar het podium en tik op “Podium is daar”.' : 'Pijl draait mee met je telefoon. Houd hem plat.')
+    : 'Pijl wijst zoals op de kaart: boven = podium. Zet het kompas aan om mee te draaien.';
+  document.getElementById('btnCompass').textContent = !compassOn ? '🧭 Kompas aan' : heading0 == null ? '🎯 Podium is daar' : '🎯 Opnieuw richten';
+}
+function startFind(key) {
+  finding = key; store.set('finding', key);
+  if (!group[me]) toast('Zet eerst je eigen locatie');
+  renderMap(); document.getElementById('findCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+document.getElementById('btnFindStop').onclick = () => { finding = null; store.del('finding'); renderMap(); };
+
+function onOrient(e) {
+  let h = null;
+  if (typeof e.webkitCompassHeading === 'number') h = e.webkitCompassHeading;          // iPhone
+  else if (typeof e.alpha === 'number') h = 360 - e.alpha;                            // Android
+  if (h == null) return;
+  heading = h;
+  if (finding && !document.getElementById('findCard').hidden) {
+    const t = findTarget(), m = me && group[me]; if (!t || !m) return;
+    const pts = route(m, t), A = pts[0], n = pts[1];
+    const mapAngle = Math.atan2(n.x - A.x, -(n.y - A.y)) * 180 / Math.PI;
+    if (heading0 != null) document.getElementById('findArrow').style.transform = `rotate(${mapAngle - (heading - heading0)}deg)`;
+  }
+}
+document.getElementById('btnCompass').onclick = async () => {
+  if (compassOn) { // kalibreren: telefoon wijst nu naar het podium
+    if (heading == null) { toast('Geen kompas-signaal — beweeg je telefoon even'); return; }
+    heading0 = heading; store.set('heading0', heading0); toast('Gericht ✔'); renderFind(); return;
+  }
+  try {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      if (await DeviceOrientationEvent.requestPermission() !== 'granted') { toast('Geen toestemming voor kompas'); return; }
+    }
+  } catch { toast('Kompas niet beschikbaar'); return; }
+  window.addEventListener('ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation', onOrient);
+  compassOn = true; heading0 = null; renderFind();
+};
 
 // ---------- Synchroniseren met de groep ----------
 function withTimeout(ms) { const c = new AbortController(); setTimeout(() => c.abort(), ms); return c.signal; }
