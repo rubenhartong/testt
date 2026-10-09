@@ -1,6 +1,6 @@
 // Pagina: eerst netwerk (max 3 s, voor slecht bereik), anders opgeslagen versie.
 // Overige bestanden: eerst cache. Na één keer openen werkt alles zonder internet.
-const CACHE = 'hardbass-v5';
+const CACHE = 'hardbass-v6';
 const ASSETS = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -31,5 +31,8 @@ self.addEventListener('fetch', e => {
       caches.match(req, { ignoreSearch: true }).then(hit => hit || caches.match('index.html'))));
     return;
   }
+  // alleen app-bestanden uit de cache; al het andere (bv. groepssync) gaat gewoon naar het netwerk
+  const path = new URL(req.url).pathname.split('/').pop();
+  if (!ASSETS.includes(path)) return;
   e.respondWith(caches.match(req, { ignoreSearch: true }).then(hit => hit || fromNetwork(req, 8000)));
 });
