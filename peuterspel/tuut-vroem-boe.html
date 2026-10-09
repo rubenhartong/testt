@@ -506,7 +506,7 @@ svg { display: block; overflow: visible; }
     el.classList.add('lifted');
     el._base = { l: r.left, t: r.top, w: r.width, h: r.height };
     layer.appendChild(el);
-    el.style.cssText = `position:absolute;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;inset:auto;transition:transform .12s;transform:scale(1.12)`;
+    el.style.cssText = `position:absolute;inset:auto;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;transition:transform .12s;transform:scale(1.12)`;
   }
   function settleInto(el, parent) {
     el.style.cssText = '';
