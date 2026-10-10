@@ -86,6 +86,9 @@
   dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 18px;
     padding: 18px; width: min(420px, calc(100vw - 32px)); }
   dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog:not([open]) { display: none; }
+  dialog.fallback { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; margin: 0;
+    box-shadow: 0 0 0 100vmax rgba(0,0,0,.6); max-height: 90vh; overflow: auto; }
   .seg { display: flex; gap: 0; margin-bottom: 10px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
   .seg button { flex: 1; border: 0; border-radius: 0; background: var(--panel2); }
   .seg button.on { background: var(--accent); color: #fff; }
@@ -123,6 +126,7 @@
       <button id="btnSync">🔄 Ververs</button>
     </div>
     <div id="syncStatus" class="muted" style="margin:-2px 0 10px"></div>
+    <button id="btnSpot" hidden style="width:100%;margin-bottom:10px">✎ Staan/zitten & vak invullen</button>
     <div id="findCard" class="card" hidden style="border-color:var(--fc)">
       <div class="row" style="flex-wrap:nowrap;align-items:center;gap:14px">
         <svg id="findArrow" viewBox="0 0 100 100" style="flex:0 0 96px;width:96px;height:96px;transition:transform .25s">
@@ -175,7 +179,7 @@
     <div class="card">
       <div class="label">Offline</div>
       <p id="offlineStatus" class="muted">Controleren…</p>
-      <p class="muted">Versie: v7 (zoek iemand)</p>
+      <p class="muted">Versie: v8</p>
       <p class="muted">Tip: zet de app vandaag op je beginscherm (Delen → "Zet op beginscherm" of browsermenu → "App installeren") en open hem één keer, dan werkt alles zonder internet.</p>
     </div>
     <div class="card">
@@ -393,6 +397,16 @@ function describe(p) { // volledige omschrijving incl. staan/zitten en vak
   return s;
 }
 
+// ---------- Dialogen (met fallback voor o.a. oudere Samsung Internet) ----------
+function openDlg(d) {
+  try { if (typeof d.showModal === 'function') { if (!d.open) d.showModal(); return; } } catch {}
+  d.classList.add('fallback'); d.setAttribute('open', '');
+}
+function closeDlg(d) {
+  try { if (typeof d.close === 'function' && !d.classList.contains('fallback')) { d.close(); return; } } catch {}
+  d.classList.remove('fallback'); d.removeAttribute('open');
+}
+
 // ---------- Groep ----------
 const GROUP = [
   { n: 'Laura', c: '#ff4fa3' }, { n: 'Jerry', c: '#2f8cff' }, { n: 'Jan', c: '#2ee06e' }, { n: 'Nardy', c: '#ffd21f' },
@@ -430,6 +444,8 @@ function renderMap() {
       ${!mine && p ? `<button data-find="g:${g.n}" aria-label="Zoek ${g.n}">🧭</button>` : ''}</li>`;
   }).join('');
   document.getElementById('placesCard').hidden = !places.length;
+  const myP = me && group[me];
+  document.getElementById('btnSpot').hidden = !(myP && zoneOf(myP.x, myP.y).kind === 'stand');
   document.getElementById('placeList').innerHTML = places.map(p => `
     <li><span><span class="dot" style="--c:${p.color}"></span><b>${esc(p.name)}</b><br><span class="muted">${esc(describe(p))}</span></span>
       <span style="display:flex;gap:6px"><button data-find="p:${p.id}" aria-label="Zoek">🧭</button>${zoneOf(p.x, p.y).kind === 'stand' ? `<button data-edit="${p.id}" aria-label="Details">✎</button>` : ''}<button data-del="${p.id}" aria-label="Verwijder">✕</button></span></li>`).join('');
@@ -448,11 +464,11 @@ function renderWho() {
   document.getElementById('whoGrid').innerHTML = GROUP.map(g =>
     `<button data-n="${g.n}" style="--c:${g.c}" class="${g.n === me ? 'on' : ''}">${g.n}</button>`).join('');
 }
-document.getElementById('btnWho').onclick = () => { renderWho(); whoDlg.showModal(); };
+document.getElementById('btnWho').onclick = () => { renderWho(); openDlg(whoDlg); };
 document.getElementById('whoGrid').onclick = e => {
   const n = e.target.dataset.n; if (!n) return;
   if (outbox && me !== n) outbox = null; // onverstuurde locatie hoort bij de vorige naam
-  me = n; store.set('me', me); renderWho(); whoDlg.close(); saveAll();
+  me = n; store.set('me', me); renderWho(); closeDlg(whoDlg); saveAll();
   toast(`Hoi ${me}! 👋`);
 };
 
@@ -464,7 +480,7 @@ function setPlacing(v) {
   document.getElementById('placeHint').textContent = v && v.place ? `Tik waar “${v.place}” is` : 'Tik op de kaart waar je nu bent';
 }
 document.getElementById('btnPlace').onclick = () => {
-  if (!me) { renderWho(); whoDlg.showModal(); return; }
+  if (!me) { renderWho(); openDlg(whoDlg); return; }
   setPlacing(placing ? null : { me: true });
 };
 document.getElementById('btnAddOther').onclick = () => {
@@ -491,7 +507,7 @@ document.getElementById('mapInner').addEventListener('click', e => {
   }
   saveAll();
   if (z.kind === 'stand') openSpot(target, true);
-  else if (mode.me) { toast('Locatie gezet — wordt gedeeld met de groep'); sync(); }
+  else if (mode.me) { toast(z.kind === 'floor' ? 'Locatie gezet op de vloer — zit je op de tribune? Tik dan óp de tribune' : 'Locatie gezet — wordt gedeeld met de groep'); sync(); }
   else toast('Plek toegevoegd');
 });
 
@@ -507,7 +523,7 @@ function openSpot(id) {
   setSeg('pose', d.pose || '');
   setSeg('ring', d.ring || z.ring);
   ['vak', 'rij', 'stoel'].forEach(k => document.getElementById('sp_' + k).value = d[k] || '');
-  dlg.showModal ? dlg.showModal() : dlg.setAttribute('open', '');
+  openDlg(dlg);
 }
 function setSeg(name, val) {
   document.querySelectorAll(`[data-seg="${name}"] button`).forEach(b => b.classList.toggle('on', b.dataset.v === val));
@@ -517,7 +533,7 @@ document.querySelectorAll('[data-seg] button').forEach(b => b.onclick = e => {
   e.preventDefault(); setSeg(b.parentElement.dataset.seg, b.dataset.v);
   if (b.dataset.v === 'zit') document.getElementById('sp_vak').focus();
 });
-const closeSpot = () => { dlg.close ? dlg.close() : dlg.removeAttribute('open'); if (spotTarget === 'me') sync(); };
+const closeSpot = () => { closeDlg(dlg); if (spotTarget === 'me') sync(); };
 document.getElementById('spotSave').onclick = e => {
   e.preventDefault();
   const clean = v => v.trim().replace(/[^\w\- ]/g, '').slice(0, 8);
@@ -686,6 +702,7 @@ function renderSync() {
   el.textContent = s;
 }
 document.getElementById('btnSync').onclick = () => sync();
+document.getElementById('btnSpot').onclick = () => openSpot('me');
 window.addEventListener('online', () => sync());
 
 // ---------- Eigen plattegrond-afbeelding ----------
@@ -741,7 +758,7 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 
 showTab(store.get('tab', 'lineup'));
 renderLineup(); renderTimeEdit(); renderWho(); renderMap(); renderNet();
-if (!me) whoDlg.showModal();
+if (!me) openDlg(whoDlg);
 sync();
 setInterval(() => { renderLineup(); if (!document.getElementById('tab-map').hidden && !placing) renderMap(); }, 30000);
 setInterval(() => { if (!document.hidden) sync(); }, 20000);
