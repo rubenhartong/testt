@@ -2,8 +2,11 @@ import "./style.css";
 import { getAllWines, getWine, putWine, deleteWine, clearWines } from "./db.js";
 import { lookupWine, MODELS, DEFAULT_MODEL } from "./ai.js";
 import { resizeImage } from "./image.js";
+import { IN_CLAUDE, claudeSample, claudeDownloads } from "./env.js";
 
 const app = document.getElementById("app");
+// Binnen Claude kleinere foto's, zodat elke wijn in één database-document past
+const PHOTO_OPTS = IN_CLAUDE ? { maxSize: 1000, quality: 0.75, maxChars: 180_000 } : {};
 const YEAR = () => new Date().getFullYear();
 
 // ---------- Instellingen (alleen in deze browser) ----------
@@ -31,6 +34,30 @@ function toast(msg) {
   el.textContent = msg;
   document.body.append(el);
   setTimeout(() => el.remove(), 3500);
+}
+
+/** Bevestigingsvenster in de pagina zelf (confirm() werkt niet overal). */
+function ask(message, okLabel = "OK", cancelLabel = "Annuleren") {
+  return new Promise((resolve) => {
+    const wrap = document.createElement("div");
+    wrap.className = "modal";
+    wrap.innerHTML = `
+      <div class="modal-box" role="alertdialog" aria-modal="true" aria-labelledby="modal-msg">
+        <p id="modal-msg">${esc(message)}</p>
+        <div class="modal-actions">
+          <button class="btn" data-answer="0">${esc(cancelLabel)}</button>
+          <button class="btn primary" data-answer="1">${esc(okLabel)}</button>
+        </div>
+      </div>`;
+    wrap.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-answer]");
+      if (!b && e.target !== wrap) return;
+      wrap.remove();
+      resolve(b?.dataset.answer === "1");
+    });
+    document.body.append(wrap);
+    wrap.querySelector('[data-answer="1"]').focus();
+  });
 }
 
 function wineTitle(w) {
@@ -64,22 +91,38 @@ function stars(rating, interactive = false) {
 }
 
 // ---------- Router ----------
-const currentRoute = () => location.hash.replace(/^#\/?/, "");
+let route = location.hash.replace(/^#\/?/, "");
+const currentRoute = () => route;
+/** Navigeer naar een scherm; buiten Claude houden we ook de URL bij. */
+function go(to) {
+  route = to.replace(/^#\/?/, "");
+  if (!IN_CLAUDE && location.hash !== "#/" + route) history.pushState(null, "", "#/" + route);
+  render();
+}
 // Schermen laden asynchroon; teken niet als de gebruiker intussen ergens anders heen ging
 const onRoute = (route) => currentRoute() === route;
 
-window.addEventListener("hashchange", render);
+window.addEventListener("popstate", () => { route = location.hash.replace(/^#\/?/, ""); render(); });
+document.addEventListener("click", (e) => {
+  const a = e.target.closest('a[href^="#/"]');
+  if (!a) return;
+  e.preventDefault();
+  go(a.getAttribute("href"));
+});
 render();
+
+let lastRoute = null;
 
 async function render() {
   const hash = currentRoute();
   const [view, id, sub] = hash.split("/");
-  window.scrollTo(0, 0);
+  if (hash !== lastRoute) window.scrollTo(0, 0);
+  lastRoute = hash;
   if (view === "wijn" && id && sub === "bewerk") return renderEdit(id);
   if (view === "wijn" && id) return renderDetail(id);
   if (view === "nieuw") return renderNew();
   if (view === "instellingen") return renderSettings();
-  if (hash) return location.replace("#/"); // onbekende route → lijst
+  if (hash) return go(""); // onbekende route → lijst
   return renderList();
 }
 
@@ -125,7 +168,7 @@ async function renderList() {
       <a class="icon-btn" href="#/instellingen" aria-label="Instellingen">⚙️</a>
     </header>
     <main class="page">
-      ${!settings.apiKey ? `<div class="notice">Stel eerst je <a href="#/instellingen">Anthropic API-sleutel</a> in om wijnen automatisch te laten herkennen.</div>` : ""}
+      ${!IN_CLAUDE && !settings.apiKey ? `<div class="notice">Stel eerst je <a href="#/instellingen">Anthropic API-sleutel</a> in om wijnen automatisch te laten herkennen.</div>` : ""}
       <section class="stats">
         <div><strong>${bottles}</strong><span>flessen</span></div>
         <div><strong>${nowCount}</strong><span>nu drinken</span></div>
@@ -229,7 +272,7 @@ function renderNew() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const photo = await resizeImage(file);
+      const photo = await resizeImage(file, PHOTO_OPTS);
       await createAndLookup({ photo, ...extras() });
     } catch (err) {
       toast("Kon de foto niet verwerken: " + err.message);
@@ -246,7 +289,7 @@ function renderNew() {
     const ex = extras();
     const wine = newWine({ name: ex.hint || null, quantity: ex.quantity, location: ex.location });
     await putWine(wine);
-    location.hash = `#/wijn/${wine.id}/bewerk`;
+    go(`#/wijn/${wine.id}/bewerk`);
   };
 }
 
@@ -258,14 +301,14 @@ function newWine(fields = {}) {
 }
 
 async function createAndLookup({ photo, hint, quantity, location: loc }) {
-  if (!settings.apiKey) {
+  if (!IN_CLAUDE && !settings.apiKey) {
     toast("Stel eerst je API-sleutel in.");
-    location.hash = "#/instellingen";
+    go("#/instellingen");
     return;
   }
   const wine = newWine({ photo, hint, quantity, location: loc, name: hint || null });
   await putWine(wine);
-  location.hash = `#/wijn/${wine.id}`;
+  go(`#/wijn/${wine.id}`);
   runLookup(wine.id);
 }
 
@@ -306,7 +349,7 @@ function refreshIfShowing(id) {
 async function renderDetail(id) {
   const w = await getWine(id);
   if (!onRoute(`wijn/${id}`)) return;
-  if (!w) { location.hash = "#/"; return; }
+  if (!w) return go("");
   const st = drinkStatus(w);
   const row = (label, value) => value ? `<div class="info-row"><dt>${label}</dt><dd>${esc(value)}</dd></div>` : "";
 
@@ -415,14 +458,14 @@ async function renderDetail(id) {
   app.querySelector("#newPhoto").onchange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    await save({ photo: await resizeImage(file) });
-    if (confirm("Foto opgeslagen. Wil je de wijn opnieuw laten opzoeken met deze foto?")) runLookup(id);
+    await save({ photo: await resizeImage(file, PHOTO_OPTS) });
+    if (await ask("Foto opgeslagen. Wil je de wijn opnieuw laten opzoeken met deze foto?", "Opnieuw opzoeken", "Nee")) runLookup(id);
     else renderDetail(id);
   };
   app.querySelector("#delete").onclick = async () => {
-    if (!confirm(`"${wineTitle(w)}" verwijderen?`)) return;
+    if (!(await ask(`"${wineTitle(w)}" verwijderen?`, "Verwijderen"))) return;
     await deleteWine(id);
-    location.hash = "#/";
+    go("#/");
   };
 }
 
@@ -455,7 +498,7 @@ function windowBar(w) {
 async function renderEdit(id) {
   const w = await getWine(id);
   if (!onRoute(`wijn/${id}/bewerk`)) return;
-  if (!w) { location.hash = "#/"; return; }
+  if (!w) return go("");
   const f = (key, label, type = "text", extra = "") => `
     <label class="field"><span>${label}</span>
       <input name="${key}" type="${type}" value="${esc(Array.isArray(w[key]) ? w[key].join(", ") : w[key])}" ${extra}>
@@ -511,7 +554,7 @@ async function renderEdit(id) {
     data.type ||= null;
     const fresh = await getWine(id);
     await putWine({ ...fresh, ...data });
-    location.hash = `#/wijn/${id}`;
+    go(`#/wijn/${id}`);
   };
 }
 
@@ -523,6 +566,9 @@ function renderSettings() {
       <h1>Instellingen</h1><span></span>
     </header>
     <main class="page">
+      ${IN_CLAUDE ? `
+      <p>Deze versie draait binnen Claude. Wijnen worden herkend met je eigen Claude-account; je hebt geen API-sleutel nodig.
+        Claude zoekt hier niet live op internet maar gebruikt zijn eigen kennis. De losse app (zie README) doet wel live webzoekopdrachten.</p>` : `
       <form id="settings" class="form">
         <label class="field"><span>Anthropic API-sleutel</span>
           <input name="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…" value="${esc(settings.apiKey)}">
@@ -533,10 +579,10 @@ function renderSettings() {
           <select name="model">${MODELS.map((m) => `<option value="${m.id}" ${settings.model === m.id ? "selected" : ""}>${m.label}</option>`).join("")}</select>
         </label>
         <button class="big-btn primary" type="submit">Opslaan</button>
-      </form>
+      </form>`}
 
       <h2>Back-up</h2>
-      <p class="hint">Je wijnen staan alleen op dit toestel. Maak regelmatig een back-up.</p>
+      <p class="hint">${IN_CLAUDE ? "Je wijnen worden bewaard bij dit artifact in Claude." : "Je wijnen staan alleen op dit toestel. Maak regelmatig een back-up."}</p>
       <div class="actions">
         <button class="btn" id="export">⬇️ Exporteren</button>
         <label class="btn">⬆️ Importeren<input type="file" accept="application/json" id="import" hidden></label>
@@ -544,20 +590,31 @@ function renderSettings() {
       </div>
     </main>`;
 
-  app.querySelector("#settings").onsubmit = (e) => {
+  const form = app.querySelector("#settings");
+  if (form) form.onsubmit = (e) => {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(e.target));
     settings.apiKey = data.apiKey.trim();
     settings.model = data.model;
     toast("Instellingen opgeslagen");
-    location.hash = "#/";
+    go("#/");
   };
   app.querySelector("#export").onclick = async () => {
     const wines = await getAllWines();
-    const blob = new Blob([JSON.stringify({ app: "wijnkelder", version: 1, wines }, null, 1)], { type: "application/json" });
+    const json = JSON.stringify({ app: "wijnkelder", version: 1, wines }, null, 1);
+    const filename = `wijnkelder-${new Date().toISOString().slice(0, 10)}.json`;
+    if (IN_CLAUDE) {
+      const downloads = await claudeDownloads;
+      if (!downloads) return toast("Exporteren is hier niet beschikbaar.");
+      try { await downloads.save({ filename, data: json }); } catch (err) {
+        if (err?.code !== "declined") toast("Exporteren is niet gelukt.");
+      }
+      return;
+    }
+    const blob = new Blob([json], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `wijnkelder-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = filename;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
@@ -574,7 +631,7 @@ function renderSettings() {
     }
   };
   app.querySelector("#wipe").onclick = async () => {
-    if (!confirm("Weet je zeker dat je ALLE wijnen wilt wissen? Dit kan niet ongedaan worden.")) return;
+    if (!(await ask("Weet je zeker dat je ALLE wijnen wilt wissen? Dit kan niet ongedaan worden.", "Alles wissen"))) return;
     await clearWines();
     toast("Alle wijnen gewist");
   };
@@ -585,6 +642,6 @@ getAllWines().then((wines) =>
   wines.filter((w) => w.aiStatus === "bezig").forEach((w) =>
     putWine({ ...w, aiStatus: "fout", aiError: "Opzoeken werd onderbroken. Tik op ‘Opnieuw opzoeken’." })));
 
-if ("serviceWorker" in navigator && import.meta.env.PROD) {
+if ("serviceWorker" in navigator && import.meta.env.PROD && !IN_CLAUDE) {
   navigator.serviceWorker.register("./sw.js").catch(() => {});
 }

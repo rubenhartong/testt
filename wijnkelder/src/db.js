@@ -1,4 +1,7 @@
-// Kleine IndexedDB-laag: alle wijnen (inclusief foto's als data-URL) blijven op het toestel.
+// Opslag van wijnen (inclusief foto's als data-URL).
+// Losse app: IndexedDB op het toestel. Binnen Claude: de database van het artifact.
+import { claudeDb } from "./env.js";
+
 const DB_NAME = "wijnkelder";
 const STORE = "wines";
 
@@ -28,8 +31,34 @@ async function tx(mode, fn) {
   });
 }
 
-export const getAllWines = () => tx("readonly", (s) => s.getAll());
-export const getWine = (id) => tx("readonly", (s) => s.get(id));
-export const putWine = (wine) => tx("readwrite", (s) => s.put({ ...wine, updatedAt: Date.now() }));
-export const deleteWine = (id) => tx("readwrite", (s) => s.delete(id));
-export const clearWines = () => tx("readwrite", (s) => s.clear());
+const local = {
+  getAll: () => tx("readonly", (s) => s.getAll()),
+  get: (id) => tx("readonly", (s) => s.get(id)),
+  put: (wine) => tx("readwrite", (s) => s.put(wine)),
+  delete: (id) => tx("readwrite", (s) => s.delete(id)),
+  clear: () => tx("readwrite", (s) => s.clear()),
+};
+
+function remote(db) {
+  const wines = db.collection("wines");
+  return {
+    getAll: async () => (await wines.get()).docs.map((d) => ({ ...d.data(), id: d.id })),
+    get: async (id) => {
+      const snap = await wines.doc(id).get();
+      return snap.exists ? { ...snap.data(), id } : undefined;
+    },
+    put: (wine) => wines.doc(wine.id).set(JSON.parse(JSON.stringify(wine))),
+    delete: (id) => wines.doc(id).delete(),
+    clear: async () => {
+      for (const d of (await wines.get()).docs) await wines.doc(d.id).delete();
+    },
+  };
+}
+
+const store = claudeDb.then((db) => (db ? remote(db) : local));
+
+export const getAllWines = async () => (await store).getAll();
+export const getWine = async (id) => (await store).get(id);
+export const putWine = async (wine) => (await store).put({ ...wine, updatedAt: Date.now() });
+export const deleteWine = async (id) => (await store).delete(id);
+export const clearWines = async () => (await store).clear();

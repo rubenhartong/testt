@@ -1,5 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { dataUrlToBase64 } from "./image.js";
+import { dataUrlToBase64, dataUrlToBlob } from "./image.js";
+import { IN_CLAUDE, claudeSample } from "./env.js";
 
 export const MODELS = [
   { id: "claude-opus-5-5", label: "Claude Opus 5.5 (beste kwaliteit)" },
@@ -74,9 +74,43 @@ Regels:
 - Is er geen jaargang zichtbaar (bv. non-vintage champagne), dan vintage = null.
 - Het huidige jaar is ${new Date().getFullYear()}.`;
 
-function client(apiKey) {
+async function client(apiKey) {
+  // De artifact-build bevat de SDK niet; daar loopt alles via Claude zelf.
+  if (import.meta.env.MODE === "artifact") throw new Error("Niet beschikbaar in deze versie.");
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
   // De sleutel staat alleen in de browser van de gebruiker zelf (persoonlijke app).
   return new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+}
+
+const SAMPLE_ERRORS = {
+  not_granted: "Je hebt deze app geen toegang tot Claude gegeven.",
+  sampling_disabled: "Claude is niet beschikbaar voor dit account.",
+  rate_limited: "Even te veel aanvragen. Probeer het over een paar minuten opnieuw.",
+  image_rejected: "Deze foto kan niet worden gebruikt. Probeer een andere.",
+  images_unavailable: "Foto's versturen kan hier niet. Typ de naam van de wijn.",
+  refused: "Claude kon deze aanvraag niet verwerken. Probeer een andere foto of omschrijving.",
+  invalid_json: "Kon het antwoord van Claude niet lezen. Probeer het opnieuw.",
+  session_expired: "Log opnieuw in bij Claude.",
+};
+
+/** Binnen Claude: herkenning met het eigen Claude-account van de gebruiker (geen live webzoekopdrachten). */
+async function lookupViaClaude({ photo, hint }) {
+  const sample = await claudeSample;
+  if (!sample) throw new Error("Claude is hier niet beschikbaar.");
+  const prompt = `${SYSTEM.replace("en zoek online betrouwbare informatie op", "en geef op basis van je kennis")}
+- Je hebt geen internettoegang; laat sources een lege lijst.
+
+${photo ? "De afbeelding is een foto van de fles of het etiket." : "Er is geen foto."}
+${hint ? `Extra informatie van de gebruiker: ${hint}` : ""}
+
+Antwoord met alleen één JSON-object met precies deze velden (null als onbekend):
+${JSON.stringify(Object.fromEntries(Object.entries(WINE_SCHEMA.properties).map(([k, v]) => [k, v.enum ? v.enum.filter(Boolean).join(" | ") : [].concat(v.type).join(" | ")])))}
+Toelichting: drinkFrom/drinkUntil/peakFrom/peakUntil zijn jaartallen; grapes en foodPairing zijn lijsten met tekst.`;
+  try {
+    return await sample.json(prompt, photo ? { images: [dataUrlToBlob(photo)] } : {});
+  } catch (e) {
+    throw new Error(SAMPLE_ERRORS[e?.code] || "Er ging iets mis bij Claude. Probeer het opnieuw.");
+  }
 }
 
 /**
@@ -84,6 +118,7 @@ function client(apiKey) {
  * @returns {Promise<object>} object volgens WINE_SCHEMA
  */
 export async function lookupWine({ apiKey, model = DEFAULT_MODEL, photo, hint }) {
+  if (IN_CLAUDE) return lookupViaClaude({ photo, hint });
   if (!apiKey) throw new Error("Stel eerst je Anthropic API-sleutel in bij Instellingen.");
 
   const content = [];
@@ -101,7 +136,7 @@ export async function lookupWine({ apiKey, model = DEFAULT_MODEL, photo, hint })
   });
 
   const messages = [{ role: "user", content }];
-  const anthropic = client(apiKey);
+  const anthropic = await client(apiKey);
 
   // Webzoekopdrachten kunnen de beurt pauzeren (pause_turn); dan hervatten we.
   for (let i = 0; i < 5; i++) {
