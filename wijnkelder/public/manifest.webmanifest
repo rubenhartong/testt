@@ -1,0 +1,11 @@
+{
+  "name": "Wijnkelder",
+  "short_name": "Wijnkelder",
+  "description": "Je eigen wijnkelder: foto's, drinkvensters en proefnotities.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#faf7f5",
+  "theme_color": "#6b1d2f",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
